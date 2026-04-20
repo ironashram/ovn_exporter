@@ -85,7 +85,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "max by (hostname, ovn_version, db_version, system_type, system_version) (ovn_info)",
+          "expr": "max by (hostname, nb_schema_version, sb_schema_version, system_type, system_version) (ovn_info)",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -105,15 +105,15 @@
             },
             "indexByName": {
               "hostname": 0,
-              "ovn_version": 1,
-              "db_version": 2,
+              "nb_schema_version": 1,
+              "sb_schema_version": 2,
               "system_type": 3,
               "system_version": 4
             },
             "renameByName": {
               "hostname": "Hostname",
-              "ovn_version": "OVN Version",
-              "db_version": "DB Version",
+              "nb_schema_version": "NB Schema Version",
+              "sb_schema_version": "SB Schema Version",
               "system_type": "System Type",
               "system_version": "OS Version"
             }
