@@ -91,11 +91,6 @@ var (
 		"The timestamp of the next potential poll of OVN stack in seconds.",
 		[]string{"system_id"}, nil,
 	)
-	pid = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "pid"),
-		"The process ID of a running OVN component. If the component is not running, then the ID is 0.",
-		[]string{"system_id", "component", "user", "group"}, nil,
-	)
 	logFileSize = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "log_file_size_bytes"),
 		"The size of a log file associated with an OVN component in bytes.",
@@ -419,7 +414,6 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- requestsTotal
 	ch <- requestsSuccessful
 	ch <- nextPoll
-	ch <- pid
 	ch <- logFileSize
 	ch <- dbFileSize
 	ch <- logEventStat
@@ -601,20 +595,16 @@ func (e *Exporter) GatherMetrics() {
 
 	components := []string{
 		"ovsdb-server-southbound",
-		"ovsdb-server-southbound-monitoring",
 		"ovsdb-server-northbound",
-		"ovsdb-server-northbound-monitoring",
 		"ovn-northd",
-		"ovn-northd-monitoring",
 	}
 	for _, component := range components {
-		p, err := e.Client.GetProcessInfo(component)
 		level.Debug(e.logger).Log(
 			"msg", "GatherMetrics() calls GetProcessInfo()",
 			"component", component,
 			"system_id", e.Client.System.ID,
 		)
-		if err != nil {
+		if _, err := e.Client.GetProcessInfo(component); err != nil {
 			level.Error(e.logger).Log(
 				"msg", "GetProcessInfo() failed",
 				"component", component,
@@ -625,17 +615,6 @@ func (e *Exporter) GatherMetrics() {
 			upValue = 0
 		} else {
 			e.IncrementSuccessCounter()
-		}
-		if p.ID > 0 {
-			e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
-				pid,
-				prometheus.GaugeValue,
-				float64(p.ID),
-				e.Client.System.ID,
-				component,
-				p.User,
-				p.Group,
-			))
 		}
 		level.Debug(e.logger).Log(
 			"msg", "GatherMetrics() completed GetProcessInfo()",

@@ -40,6 +40,7 @@ func main() {
 	var databaseSouthboundPortRaft int
 	var serviceNorthdFileLogPath string
 	var serviceNorthdFilePidPath string
+	var serviceNorthdSocketControl string
 
 	flag.StringVar(&listenAddress, "web.listen-address", ":9476", "Address to listen on for web interface and telemetry.")
 	flag.StringVar(&metricsPath, "web.telemetry-path", "/metrics", "Path under which to expose metrics.")
@@ -70,6 +71,7 @@ func main() {
 
 	flag.StringVar(&serviceNorthdFileLogPath, "service.ovn.northd.file.log.path", "/var/log/openvswitch/ovn-northd.log", "OVN northd daemon log file.")
 	flag.StringVar(&serviceNorthdFilePidPath, "service.ovn.northd.file.pid.path", "/run/openvswitch/ovn-northd.pid", "OVN northd daemon process id file.")
+	flag.StringVar(&serviceNorthdSocketControl, "service.ovn.northd.socket.control", "unix:/run/openvswitch/ovn-northd.ctl", "JSON-RPC unix socket to OVN northd app.")
 
 	var usageHelp = func() {
 		fmt.Fprintf(os.Stderr, "\n%s - Prometheus Exporter for Open Virtual Network (OVN)\n\n", ovn.GetExporterName())
@@ -139,6 +141,7 @@ func main() {
 
 	exporter.Client.Service.Northd.File.Log.Path = serviceNorthdFileLogPath
 	exporter.Client.Service.Northd.File.Pid.Path = serviceNorthdFilePidPath
+	exporter.Client.Service.Northd.Socket.Control = serviceNorthdSocketControl
 
 	exporter, err = ovn.ExporterPerformClientCalls(exporter)
 	if err != nil {

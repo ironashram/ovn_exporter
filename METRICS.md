@@ -32,12 +32,6 @@ This exporter follows [Prometheus metric naming best practices](https://promethe
 | `ovn_failed_requests_total` | Counter | Total number of failed requests to OVN stack | `system_id` |
 | `ovn_next_poll_timestamp_seconds` | Counter | Timestamp of the next potential poll of OVN stack (Unix timestamp) | `system_id` |
 
-### Process Metrics
-
-| Metric | Type | Description | Labels |
-|--------|------|-------------|--------|
-| `ovn_pid` | Gauge | Process ID of a running OVN component (0 if not running) | `system_id`, `component`, `user`, `group` |
-
 ### File Size Metrics
 
 | Metric | Type | Description | Labels |
