@@ -46,7 +46,7 @@ func init() {
 	app = versioned.NewPackageManager("ovn-exporter")
 	app.Description = "Prometheus Exporter for Open Virtual Network (OVN)"
 	app.Documentation = "https://github.com/Liquescent-Development/ovn_exporter/"
-	app.SetVersion(appVersion, "2.2.0")
+	app.SetVersion(appVersion, "2.5.0")
 	app.SetGitBranch(gitBranch, "")
 	app.SetGitCommit(gitCommit, "")
 	app.SetBuildUser(buildUser, "")
@@ -64,12 +64,11 @@ var (
 		"This metric provides basic information about OVN stack. It is always set to 1.",
 		[]string{
 			"system_id",
-			"rundir",
 			"hostname",
 			"system_type",
 			"system_version",
-			"ovs_version",
-			"db_version",
+			"nb_schema_version",
+			"sb_schema_version",
 		}, nil,
 	)
 	requestErrors = prometheus.NewDesc(
@@ -91,11 +90,6 @@ var (
 		prometheus.BuildFQName(namespace, "", "next_poll_timestamp_seconds"),
 		"The timestamp of the next potential poll of OVN stack in seconds.",
 		[]string{"system_id"}, nil,
-	)
-	pid = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "pid"),
-		"The process ID of a running OVN component. If the component is not running, then the ID is 0.",
-		[]string{"system_id", "component", "user", "group"}, nil,
 	)
 	logFileSize = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "log_file_size_bytes"),
@@ -420,7 +414,6 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- requestsTotal
 	ch <- requestsSuccessful
 	ch <- nextPoll
-	ch <- pid
 	ch <- logFileSize
 	ch <- dbFileSize
 	ch <- logEventStat
@@ -515,9 +508,9 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			info,
 			prometheus.GaugeValue,
 			1,
-			e.Client.System.ID, e.Client.System.RunDir, e.Client.System.Hostname,
+			e.Client.System.ID, e.Client.System.Hostname,
 			e.Client.System.Type, e.Client.System.Version,
-			e.Client.Database.Vswitch.Version, e.Client.Database.Vswitch.Schema.Version,
+			e.Client.Database.Northbound.Schema.Version, e.Client.Database.Southbound.Schema.Version,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			requestErrors,
@@ -587,7 +580,6 @@ func (e *Exporter) GatherMetrics() {
 	if err != nil {
 		level.Error(e.logger).Log(
 			"msg", "GetSystemInfo() failed",
-			"vswitch_name", e.Client.Database.Vswitch.Name,
 			"system_id", e.Client.System.ID,
 			"error", err.Error(),
 		)
@@ -597,29 +589,22 @@ func (e *Exporter) GatherMetrics() {
 		e.IncrementSuccessCounter()
 		level.Debug(e.logger).Log(
 			"msg", "GetSystemInfo() successful",
-			"vswitch_name", e.Client.Database.Vswitch.Name,
 			"system_id", e.Client.System.ID,
 		)
 	}
 
 	components := []string{
-		"ovsdb-server",
 		"ovsdb-server-southbound",
-		"ovsdb-server-southbound-monitoring",
 		"ovsdb-server-northbound",
-		"ovsdb-server-northbound-monitoring",
 		"ovn-northd",
-		"ovn-northd-monitoring",
-		"ovs-vswitchd",
 	}
 	for _, component := range components {
-		p, err := e.Client.GetProcessInfo(component)
 		level.Debug(e.logger).Log(
 			"msg", "GatherMetrics() calls GetProcessInfo()",
 			"component", component,
 			"system_id", e.Client.System.ID,
 		)
-		if err != nil {
+		if _, err := e.Client.GetProcessInfo(component); err != nil {
 			level.Error(e.logger).Log(
 				"msg", "GetProcessInfo() failed",
 				"component", component,
@@ -631,17 +616,6 @@ func (e *Exporter) GatherMetrics() {
 		} else {
 			e.IncrementSuccessCounter()
 		}
-		if p.ID > 0 {
-			e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
-				pid,
-				prometheus.GaugeValue,
-				float64(p.ID),
-				e.Client.System.ID,
-				component,
-				p.User,
-				p.Group,
-			))
-		}
 		level.Debug(e.logger).Log(
 			"msg", "GatherMetrics() completed GetProcessInfo()",
 			"component", component,
@@ -650,11 +624,9 @@ func (e *Exporter) GatherMetrics() {
 	}
 
 	components = []string{
-		"ovsdb-server",
 		"ovsdb-server-southbound",
 		"ovsdb-server-northbound",
 		"ovn-northd",
-		"ovs-vswitchd",
 	}
 	for _, component := range components {
 		level.Debug(e.logger).Log(
@@ -1000,7 +972,6 @@ func (e *Exporter) GatherMetrics() {
 	southClusterID := ""
 
 	components = []string{
-		"ovsdb-server",
 		"ovsdb-server-southbound",
 		"ovsdb-server-northbound",
 	}
@@ -1455,9 +1426,9 @@ func (e *Exporter) GatherMetrics() {
 		info,
 		prometheus.GaugeValue,
 		1,
-		e.Client.System.ID, e.Client.System.RunDir, e.Client.System.Hostname,
+		e.Client.System.ID, e.Client.System.Hostname,
 		e.Client.System.Type, e.Client.System.Version,
-		e.Client.Database.Vswitch.Version, e.Client.Database.Vswitch.Schema.Version,
+		e.Client.Database.Northbound.Schema.Version, e.Client.Database.Southbound.Schema.Version,
 	))
 
 	e.metrics = append(e.metrics, prometheus.MustNewConstMetric(

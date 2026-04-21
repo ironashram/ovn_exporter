@@ -107,9 +107,6 @@ curl -s http://localhost:9476/metrics | wc -l
 | SB log | `/var/log/openvswitch/ovsdb-server-sb.log` | `/var/log/kolla/openvswitch/ovn-sb-db.log` |
 | northd PID | `/run/openvswitch/ovn-northd.pid` | `/run/ovn/ovn-northd.pid` |
 | northd log | `/var/log/openvswitch/ovn-northd.log` | `/var/log/kolla/openvswitch/ovn-northd.log` |
-| OVS data | `/etc/openvswitch/conf.db` | `/var/lib/docker/volumes/openvswitch_db/_data/conf.db` |
-| OVS log | `/var/log/openvswitch/ovsdb-server.log` | `/var/log/kolla/openvswitch/ovsdb-server.log` |
-| vswitchd log | `/var/log/openvswitch/ovs-vswitchd.log` | `/var/log/kolla/openvswitch/ovs-vswitchd.log` |
 
 ## Deployment Notes
 
@@ -127,6 +124,6 @@ Both exporters complement each other for complete OVN/OVS visibility.
 
 ## Notes
 
-- The systemd unit depends on `kolla-openvswitch_db-container.service` (required) and OVN containers (wanted)
-- System information is queried directly from the OVS database - no manual system-id file needed
+- The systemd unit depends on the OVN NB/SB DB containers (required) and the northd container (wanted); OVS is not required
+- `system_id` and `hostname` labels are derived from `os.Hostname()`; `system_type`/`system_version` come from `/etc/os-release`; NB/SB schema versions come from the OVN databases
 - Metrics are exposed on port 9476 by default

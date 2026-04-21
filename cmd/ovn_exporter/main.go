@@ -20,13 +20,6 @@ func main() {
 	var pollInterval int
 	var isShowVersion bool
 	var logLevel string
-	var systemRunDir string
-	var databaseVswitchName string
-	var databaseVswitchSocketRemote string
-	var databaseVswitchFileDataPath string
-	var databaseVswitchFileLogPath string
-	var databaseVswitchFilePidPath string
-	var databaseVswitchFileSystemIDPath string
 	var databaseNorthboundName string
 	var databaseNorthboundSocketRemote string
 	var databaseNorthboundSocketControl string
@@ -45,10 +38,9 @@ func main() {
 	var databaseSouthboundPortDefault int
 	var databaseSouthboundPortSsl int
 	var databaseSouthboundPortRaft int
-	var serviceVswitchdFileLogPath string
-	var serviceVswitchdFilePidPath string
 	var serviceNorthdFileLogPath string
 	var serviceNorthdFilePidPath string
+	var serviceNorthdSocketControl string
 
 	flag.StringVar(&listenAddress, "web.listen-address", ":9476", "Address to listen on for web interface and telemetry.")
 	flag.StringVar(&metricsPath, "web.telemetry-path", "/metrics", "Path under which to expose metrics.")
@@ -56,15 +48,6 @@ func main() {
 	flag.IntVar(&pollInterval, "ovn.poll-interval", 15, "The minimum interval (in seconds) between collections from OVN server.")
 	flag.BoolVar(&isShowVersion, "version", false, "version information")
 	flag.StringVar(&logLevel, "log.level", "info", "logging severity level")
-
-	flag.StringVar(&systemRunDir, "system.run.dir", "/var/run/openvswitch", "OVS default run directory.")
-
-	flag.StringVar(&databaseVswitchName, "database.vswitch.name", "Open_vSwitch", "The name of OVS db.")
-	flag.StringVar(&databaseVswitchSocketRemote, "database.vswitch.socket.remote", "unix:/var/run/openvswitch/db.sock", "JSON-RPC unix socket to OVS db.")
-	flag.StringVar(&databaseVswitchFileDataPath, "database.vswitch.file.data.path", "/etc/openvswitch/conf.db", "OVS db file.")
-	flag.StringVar(&databaseVswitchFileLogPath, "database.vswitch.file.log.path", "/var/log/openvswitch/ovsdb-server.log", "OVS db log file.")
-	flag.StringVar(&databaseVswitchFilePidPath, "database.vswitch.file.pid.path", "/var/run/openvswitch/ovsdb-server.pid", "OVS db process id file.")
-	flag.StringVar(&databaseVswitchFileSystemIDPath, "database.vswitch.file.system.id.path", "/etc/openvswitch/system-id.conf", "OVS system id file.")
 
 	flag.StringVar(&databaseNorthboundName, "database.northbound.name", "OVN_Northbound", "The name of OVN NB (northbound) db.")
 	flag.StringVar(&databaseNorthboundSocketRemote, "database.northbound.socket.remote", "unix:/run/openvswitch/ovnnb_db.sock", "JSON-RPC unix socket to OVN NB db.")
@@ -86,11 +69,9 @@ func main() {
 	flag.IntVar(&databaseSouthboundPortSsl, "database.southbound.port.ssl", 6632, "OVN SB db network socket secure port.")
 	flag.IntVar(&databaseSouthboundPortRaft, "database.southbound.port.raft", 6644, "OVN SB db network port for clustering (raft)")
 
-	flag.StringVar(&serviceVswitchdFileLogPath, "service.vswitchd.file.log.path", "/var/log/openvswitch/ovs-vswitchd.log", "OVS vswitchd daemon log file.")
-	flag.StringVar(&serviceVswitchdFilePidPath, "service.vswitchd.file.pid.path", "/var/run/openvswitch/ovs-vswitchd.pid", "OVS vswitchd daemon process id file.")
-
 	flag.StringVar(&serviceNorthdFileLogPath, "service.ovn.northd.file.log.path", "/var/log/openvswitch/ovn-northd.log", "OVN northd daemon log file.")
 	flag.StringVar(&serviceNorthdFilePidPath, "service.ovn.northd.file.pid.path", "/run/openvswitch/ovn-northd.pid", "OVN northd daemon process id file.")
+	flag.StringVar(&serviceNorthdSocketControl, "service.ovn.northd.socket.control", "unix:/run/openvswitch/ovn-northd.ctl", "JSON-RPC unix socket to OVN northd app.")
 
 	var usageHelp = func() {
 		fmt.Fprintf(os.Stderr, "\n%s - Prometheus Exporter for Open Virtual Network (OVN)\n\n", ovn.GetExporterName())
@@ -138,15 +119,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	exporter.Client.System.RunDir = systemRunDir
-
-	exporter.Client.Database.Vswitch.Name = databaseVswitchName
-	exporter.Client.Database.Vswitch.Socket.Remote = databaseVswitchSocketRemote
-	exporter.Client.Database.Vswitch.File.Data.Path = databaseVswitchFileDataPath
-	exporter.Client.Database.Vswitch.File.Log.Path = databaseVswitchFileLogPath
-	exporter.Client.Database.Vswitch.File.Pid.Path = databaseVswitchFilePidPath
-	exporter.Client.Database.Vswitch.File.SystemID.Path = databaseVswitchFileSystemIDPath
-
 	exporter.Client.Database.Northbound.Name = databaseNorthboundName
 	exporter.Client.Database.Northbound.Socket.Remote = databaseNorthboundSocketRemote
 	exporter.Client.Database.Northbound.Socket.Control = databaseNorthboundSocketControl
@@ -167,11 +139,9 @@ func main() {
 	exporter.Client.Database.Southbound.Port.Ssl = databaseSouthboundPortSsl
 	exporter.Client.Database.Southbound.Port.Raft = databaseSouthboundPortRaft
 
-	exporter.Client.Service.Vswitchd.File.Log.Path = serviceVswitchdFileLogPath
-	exporter.Client.Service.Vswitchd.File.Pid.Path = serviceVswitchdFilePidPath
-
 	exporter.Client.Service.Northd.File.Log.Path = serviceNorthdFileLogPath
 	exporter.Client.Service.Northd.File.Pid.Path = serviceNorthdFilePidPath
+	exporter.Client.Service.Northd.Socket.Control = serviceNorthdSocketControl
 
 	exporter, err = ovn.ExporterPerformClientCalls(exporter)
 	if err != nil {

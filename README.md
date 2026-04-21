@@ -17,6 +17,17 @@ This exporter collects metrics from the following OVN components:
 * `OVN Southbound` database
 * `Open_vSwitch` database
 
+## What's New in v2.5.0
+
+### Breaking Changes
+- **OVS dependency removed.** The exporter no longer connects to the Open vSwitch database. `ovn_info` labels now reflect OVN-side sources only:
+  - **Dropped:** `rundir`, `ovs_version`, `db_version`
+  - **Added:** `nb_schema_version`, `sb_schema_version` (from the OVN Northbound and Southbound schemas)
+  - `system_id` and `hostname` come from `os.Hostname()`; `system_type`/`system_version` come from `/etc/os-release`
+- **`ovn_pid` metric removed.** The `/proc/<pid>` probe produced wrong data inside a container PID namespace (Kolla, etc.) and bumped the failure counter on hosts where `ovn-northd` ran inside a container. Component liveness is now probed through each daemon's JSON-RPC control socket, so `ovn_failed_requests_total` no longer climbs from that cause.
+- **Flags removed (startup now errors on them):** `-database.vswitch.*`, `-service.vswitchd.*`, `-system.run.dir`. The `*-monitoring` component variants are gone with the PID walk that produced them.
+- **New flag:** `-service.ovn.northd.socket.control` (defaults to `unix:/run/openvswitch/ovn-northd.ctl`). Point this at the real northd control socket on your deployment (Kolla uses `/run/ovn/ovn-northd.ctl`).
+
 ## What's New in v2.2.0
 
 ### New Features
@@ -69,13 +80,13 @@ Download the latest release for your platform from the [releases page](https://g
 
 ```bash
 # Linux amd64
-wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.2.0/ovn-exporter_2.2.0_linux_amd64.tar.gz
-tar xvzf ovn-exporter_2.2.0_linux_amd64.tar.gz
+wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.5.0/ovn-exporter_2.5.0_linux_amd64.tar.gz
+tar xvzf ovn-exporter_2.5.0_linux_amd64.tar.gz
 sudo mv ovn-exporter /usr/local/bin/
 
 # Linux arm64
-wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.2.0/ovn-exporter_2.2.0_linux_arm64.tar.gz
-tar xvzf ovn-exporter_2.2.0_linux_arm64.tar.gz
+wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.5.0/ovn-exporter_2.5.0_linux_arm64.tar.gz
+tar xvzf ovn-exporter_2.5.0_linux_arm64.tar.gz
 sudo mv ovn-exporter /usr/local/bin/
 ```
 
