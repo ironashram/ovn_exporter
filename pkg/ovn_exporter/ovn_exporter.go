@@ -1097,7 +1097,7 @@ func (e *Exporter) GatherMetrics() {
 						"system_id", e.Client.System.ID,
 						"error", err.Error(),
 					)
-					e.IncrementRequestCounter()
+					e.IncrementErrorCounter()
 					e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
 						clusterEnabled,
 						prometheus.GaugeValue,
@@ -1106,7 +1106,7 @@ func (e *Exporter) GatherMetrics() {
 						component,
 					))
 				} else {
-					e.IncrementRequestCounter()
+					e.IncrementSuccessCounter()
 					isClusterEnabled = true
 					switch component {
 					case "ovsdb-server-southbound":

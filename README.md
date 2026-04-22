@@ -17,6 +17,11 @@ This exporter collects metrics from the following OVN components:
 * `OVN Southbound` database
 * `Open_vSwitch` database
 
+## What's New in v2.5.1
+
+### Bug Fixes
+- **Fix request counter accounting.** `GetAppClusteringInfo()` used `IncrementRequestCounter()` on both branches instead of the success/error variants, so `ovn_requests_total` drifted above `ovn_successful_requests_total + ovn_failed_requests_total`. Dashboards computing `ovn_successful_requests_total / ovn_requests_total` saw an artificial ceiling below 100% even when nothing was actually failing.
+
 ## What's New in v2.5.0
 
 ### Breaking Changes
@@ -80,13 +85,13 @@ Download the latest release for your platform from the [releases page](https://g
 
 ```bash
 # Linux amd64
-wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.5.0/ovn-exporter_2.5.0_linux_amd64.tar.gz
-tar xvzf ovn-exporter_2.5.0_linux_amd64.tar.gz
+wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.5.1/ovn-exporter_2.5.1_linux_amd64.tar.gz
+tar xvzf ovn-exporter_2.5.1_linux_amd64.tar.gz
 sudo mv ovn-exporter /usr/local/bin/
 
 # Linux arm64
-wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.5.0/ovn-exporter_2.5.0_linux_arm64.tar.gz
-tar xvzf ovn-exporter_2.5.0_linux_arm64.tar.gz
+wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.5.1/ovn-exporter_2.5.1_linux_arm64.tar.gz
+tar xvzf ovn-exporter_2.5.1_linux_arm64.tar.gz
 sudo mv ovn-exporter /usr/local/bin/
 ```
 
