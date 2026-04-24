@@ -161,6 +161,16 @@ var (
 		"The value of the tunnel key associated with the logical switch port.",
 		[]string{"system_id", "uuid"}, nil,
 	)
+	portBindingCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "port_binding_count"),
+		"Number of OVN Southbound port bindings scheduled on a chassis, broken down by port binding type. chassis is the chassis UUID and chassis_name its human-readable name. Unscheduled bindings are reported with chassis=\"unbound\"; plain VIF ports (empty OVN type) are reported with type=\"vif\".",
+		[]string{"system_id", "chassis", "chassis_name", "type"}, nil,
+	)
+	gatewayPortInfo = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "gateway_port_info"),
+		"Information about chassis-pinned OVN gateway port bindings (type=chassisredirect or type=l3gateway). Always 1. chassis_name is the human-readable name of the chassis referenced by chassis. The Neutron router UUID is exposed via router_name when the binding carries a neutron:router_name external_id.",
+		[]string{"system_id", "uuid", "chassis", "chassis_name", "type", "logical_port", "datapath", "router_name"}, nil,
+	)
 	logicalRouterInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "logical_router_info"),
 		"The information about OVN logical router. This metric is always up (1).",
@@ -426,6 +436,8 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- logicalSwitchTunnelKey
 	ch <- logicalSwitchPortInfo
 	ch <- logicalSwitchPortTunnelKey
+	ch <- portBindingCount
+	ch <- gatewayPortInfo
 	ch <- logicalRouterInfo
 	ch <- logicalRouterExternalIDs
 	ch <- logicalRouterPorts
@@ -702,6 +714,7 @@ func (e *Exporter) GatherMetrics() {
 		"msg", "GatherMetrics() calls GetChassis()",
 		"system_id", e.Client.System.ID,
 	)
+	chassisNameByUUID := map[string]string{}
 	if vteps, err := e.Client.GetChassis(); err != nil {
 		level.Error(e.logger).Log(
 			"msg", "GetChassis() failed",
@@ -714,6 +727,7 @@ func (e *Exporter) GatherMetrics() {
 	} else {
 		e.IncrementSuccessCounter()
 		for _, vtep := range vteps {
+			chassisNameByUUID[vtep.UUID] = vtep.Name
 			e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
 				chassisInfo,
 				prometheus.GaugeValue,
@@ -871,6 +885,70 @@ func (e *Exporter) GatherMetrics() {
 	}
 	level.Debug(e.logger).Log(
 		"msg", "GatherMetrics() completed GetLogicalSwitchPorts()",
+		"system_id", e.Client.System.ID,
+	)
+
+	// Gather Port_Binding metrics (chassis-level distribution of all binding
+	// types, plus drill-down info for chassis-pinned gateway ports).
+	level.Debug(e.logger).Log(
+		"msg", "GatherMetrics() calls GetPortBindings()",
+		"system_id", e.Client.System.ID,
+	)
+	pbs, err := e.Client.GetPortBindings()
+	if err != nil {
+		level.Error(e.logger).Log(
+			"msg", "GetPortBindings() failed",
+			"southbound_db_name", e.Client.Database.Southbound.Name,
+			"system_id", e.Client.System.ID,
+			"error", err.Error(),
+		)
+		e.IncrementErrorCounter()
+		upValue = 0
+	} else {
+		e.IncrementSuccessCounter()
+		pbCounts := make(map[[3]string]int)
+		for _, pb := range pbs {
+			chassisLabel := pb.ChassisUUID
+			chassisName := chassisNameByUUID[pb.ChassisUUID]
+			if chassisLabel == "" {
+				chassisLabel = "unbound"
+			}
+			typeLabel := pb.Type
+			if typeLabel == "" {
+				typeLabel = "vif"
+			}
+			pbCounts[[3]string{chassisLabel, chassisName, typeLabel}]++
+
+			if pb.Type == "chassisredirect" || pb.Type == "l3gateway" {
+				e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
+					gatewayPortInfo,
+					prometheus.GaugeValue,
+					float64(1),
+					e.Client.System.ID,
+					pb.UUID,
+					pb.ChassisUUID,
+					chassisName,
+					pb.Type,
+					pb.LogicalPort,
+					pb.DatapathUUID,
+					pb.ExternalIDs["neutron:router_name"],
+				))
+			}
+		}
+		for key, count := range pbCounts {
+			e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
+				portBindingCount,
+				prometheus.GaugeValue,
+				float64(count),
+				e.Client.System.ID,
+				key[0],
+				key[1],
+				key[2],
+			))
+		}
+	}
+	level.Debug(e.logger).Log(
+		"msg", "GatherMetrics() completed GetPortBindings()",
 		"system_id", e.Client.System.ID,
 	)
 
