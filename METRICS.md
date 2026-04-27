@@ -125,6 +125,17 @@ This exporter follows [Prometheus metric naming best practices](https://promethe
 | `ovn_logical_switch_port_binding` | Gauge | Association between logical switch and port (always 1) | `system_id`, `uuid`, `port` |
 | `ovn_logical_switch_port_tunnel_key` | Gauge | Tunnel key value for logical switch port | `system_id`, `uuid` |
 
+### Southbound Port Bindings
+
+Metrics sourced from the full OVN Southbound `Port_Binding` table, including bindings not backed by a northbound Logical_Switch_Port (e.g. `chassisredirect`, `l3gateway`, `patch`, `localnet`).
+
+| Metric | Type | Description | Labels |
+|--------|------|-------------|--------|
+| `ovn_port_binding_count` | Gauge | Number of port bindings scheduled on a chassis, grouped by binding type. Unscheduled bindings report `chassis="unbound"`; plain VIF ports (empty OVN `type`) report `type="vif"`. | `system_id`, `chassis`, `chassis_name`, `type` |
+| `ovn_gateway_port_info` | Gauge | Information about chassis-pinned gateway port bindings — either `chassisredirect` (distributed-router egress anchor) or `l3gateway` (centralized gateway router port). Always 1. | `system_id`, `uuid`, `chassis`, `chassis_name`, `type`, `logical_port`, `datapath`, `router_name` |
+
+`chassis` is the chassis UUID (from SB `Port_Binding.chassis`); `chassis_name` is the human-readable name from SB `Chassis.name` (typically the compute hostname). `router_name` is populated from the binding's `external_ids["neutron:router_name"]` when present (OpenStack/Neutron deployments) and is empty otherwise.
+
 ### Logical Routers
 
 | Metric | Type | Description | Labels |
@@ -211,6 +222,21 @@ count(ovn_logical_switch_info)
 
 # Total logical switch ports
 sum(ovn_logical_switch_ports)
+```
+
+### Monitor N/S Gateway Distribution
+```promql
+# Distribution of chassisredirect (SNAT egress) ports across chassis
+sum by (chassis_name) (ovn_port_binding_count{type="chassisredirect"})
+
+# All chassis-pinned gateway ports (chassisredirect + l3gateway)
+sum by (chassis_name, type) (ovn_port_binding_count{type=~"chassisredirect|l3gateway"})
+
+# Identify unbound chassisredirect bindings (HA group has no active chassis)
+ovn_port_binding_count{chassis="unbound", type="chassisredirect"} > 0
+
+# Which router's gateway port lives on which chassis (Neutron)
+ovn_gateway_port_info
 ```
 
 ### Performance Monitoring

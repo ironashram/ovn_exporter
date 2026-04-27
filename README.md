@@ -17,6 +17,17 @@ This exporter collects metrics from the following OVN components:
 * `OVN Southbound` database
 * `Open_vSwitch` database
 
+## What's New in v2.6.0
+
+### New Features
+- **Port binding distribution metrics.** Two new metrics from the OVN Southbound `Port_Binding` table:
+  - `ovn_port_binding_count{chassis, chassis_name, type}` reports the per-chassis distribution of every port binding type. Unscheduled bindings get `chassis="unbound"`; plain tenant VIF ports (empty OVN type) get `type="vif"`.
+  - `ovn_gateway_port_info{chassis, chassis_name, type, logical_port, datapath, router_name, ...}` is a drill-down for chassis-pinned gateway ports (`type=chassisredirect` or `type=l3gateway`). `router_name` is extracted from `external_ids[neutron:router_name]` when present.
+- **Dashboard.** OVN System Overview gains a stacked timeseries of chassisredirect distribution by chassis, and a table mapping gateway ports to routers and chassis.
+
+### Dependency
+- Bumps `lucadelmonte/ovsdb` to v1.1.2 for the new `GetPortBindings()` function.
+
 ## What's New in v2.5.1
 
 ### Bug Fixes
@@ -85,13 +96,13 @@ Download the latest release for your platform from the [releases page](https://g
 
 ```bash
 # Linux amd64
-wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.5.1/ovn-exporter_2.5.1_linux_amd64.tar.gz
-tar xvzf ovn-exporter_2.5.1_linux_amd64.tar.gz
+wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.6.0/ovn-exporter_2.6.0_linux_amd64.tar.gz
+tar xvzf ovn-exporter_2.6.0_linux_amd64.tar.gz
 sudo mv ovn-exporter /usr/local/bin/
 
 # Linux arm64
-wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.5.1/ovn-exporter_2.5.1_linux_arm64.tar.gz
-tar xvzf ovn-exporter_2.5.1_linux_arm64.tar.gz
+wget https://github.com/Liquescent-Development/ovn_exporter/releases/download/v2.6.0/ovn-exporter_2.6.0_linux_arm64.tar.gz
+tar xvzf ovn-exporter_2.6.0_linux_arm64.tar.gz
 sudo mv ovn-exporter /usr/local/bin/
 ```
 
